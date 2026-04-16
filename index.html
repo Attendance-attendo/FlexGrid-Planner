@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexGrid-Planner by yuvan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #facc15; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 20px; }
+        .controls { display: flex; gap: 10px; }
+        button { background: var(--border); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        button:hover { background: #475569; transform: translateY(-2px); }
+        button.primary { background: var(--gold); color: black; }
+        .table-container { width: 100%; overflow-x: auto; background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        table { border-collapse: collapse; width: 100%; min-width: 800px; }
+        th, td { border: 1px solid var(--border); padding: 12px; text-align: center; }
+        th { background: rgba(255,255,255,0.05); color: var(--gold); font-size: 12px; }
+        td input { background: transparent; border: none; color: white; width: 100%; text-align: left; outline: none; font-weight: 600; }
+        .check-cell { cursor: pointer; font-size: 18px; transition: 0.2s; min-width: 45px; }
+        .check-cell:hover { background: rgba(250, 204, 21, 0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1 style="margin:0; font-size: 24px; color: var(--gold); letter-spacing: -1px;">FlexGrid Planner</h1>
+            <p id="modeStatus" style="margin:0; font-size: 12px; opacity: 0.6;">Standard Monthly Mode</p>
+        </div>
+        <div class="controls">
+            <button onclick="addNewTask()">+ Add Task</button>
+            <button id="addColBtn" style="display:none;" onclick="addCustomColumn()">+ Add Column</button>
+            <button class="primary" onclick="toggleCustomMode()">Toggle Custom Mode</button>
+            <button style="background:#ef4444;" onclick="clearData()">Clear All</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead><tr id="headRow"><th style="min-width: 250px; text-align: left;">Tasks / Habits</th></tr></thead>
+            <tbody id="gridBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let customMode = false;
+        const headRow = document.getElementById('headRow');
+        const gridBody = document.getElementById('gridBody');
+
+        // 1. Initialize Table based on Month
+        function initTable() {
+            const days = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+            for(let i = 1; i <= days; i++) createHeader(i);
+            loadSavedData();
+        }
+
+        function createHeader(label) {
+            const th = document.createElement('th');
+            th.innerText = label;
+            headRow.appendChild(th);
+        }
+
+        function addNewTask(taskName = "") {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td><input type="text" value="${taskName}" onchange="saveData()" placeholder="Enter task..."></td>`;
+            const colCount = headRow.children.length - 1;
+            for(let i = 0; i < colCount; i++) {
+                const td = document.createElement('td');
+                td.className = "check-cell";
+                td.onclick = function() { 
+                    this.innerText = this.innerText === "✓" ? "" : "✓"; 
+                    this.style.color = "#facc15";
+                    saveData();
+                };
+                row.appendChild(td);
+            }
+            gridBody.appendChild(row);
+            saveData();
+        }
+
+        function addCustomColumn() {
+            createHeader(headRow.children.length);
+            Array.from(gridBody.rows).forEach(row => {
+                const td = document.createElement('td');
+                td.className = "check-cell";
+                td.onclick = function() { 
+                    this.innerText = this.innerText === "✓" ? "" : "✓"; 
+                    this.style.color = "#facc15";
+                    saveData();
+                };
+                row.appendChild(td);
+            });
+            saveData();
+        }
+
+        function toggleCustomMode() {
+            customMode = !customMode;
+            document.getElementById('addColBtn').style.display = customMode ? "block" : "none";
+            document.getElementById('modeStatus').innerText = customMode ? "Infinite Custom Mode" : "Standard Monthly Mode";
+        }
+
+        // 2. Local Storage Functions
+        function saveData() {
+            const data = {
+                headers: Array.from(headRow.children).slice(1).map(th => th.innerText),
+                rows: Array.from(gridBody.rows).map(row => ({
+                    name: row.cells[0].querySelector('input').value,
+                    checks: Array.from(row.cells).slice(1).map(td => td.innerText)
+                }))
+            };
+            localStorage.setItem('flexGridData', JSON.stringify(data));
+        }
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('flexGridData');
+            if(!saved) return addNewTask("Water Plants");
+            const data = JSON.parse(saved);
+            
+            // Rebuild headers if custom
+            if(data.headers.length > headRow.children.length - 1) {
+                for(let i = headRow.children.length; i <= data.headers.length; i++) createHeader(i);
+            }
+
+            data.rows.forEach(r => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td><input type="text" value="${r.name}" onchange="saveData()"></td>`;
+                r.checks.forEach(c => {
+                    const td = document.createElement('td');
+                    td.className = "check-cell";
+                    td.innerText = c;
+                    td.style.color = "#facc15";
+                    td.onclick = function() { this.innerText = this.innerText === "✓" ? "" : "✓"; saveData(); };
+                    row.appendChild(td);
+                });
+                gridBody.appendChild(row);
+            });
+        }
+
+        function clearData() { if(confirm("Clear all tasks?")) { localStorage.clear(); location.reload(); } }
+
+        initTable();
+    </script>
+</body>
+</html>
