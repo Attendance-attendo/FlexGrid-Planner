@@ -3,144 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlexGrid-Planner by yuvan</title>
+    <title>FlexGrid by yuvan</title>
+    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --gold: #facc15; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --border: #334155; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto 20px; }
-        .controls { display: flex; gap: 10px; }
-        button { background: var(--border); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
-        button:hover { background: #475569; transform: translateY(-2px); }
-        button.primary { background: var(--gold); color: black; }
-        .table-container { width: 100%; overflow-x: auto; background: var(--card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        table { border-collapse: collapse; width: 100%; min-width: 800px; }
-        th, td { border: 1px solid var(--border); padding: 12px; text-align: center; }
-        th { background: rgba(255,255,255,0.05); color: var(--gold); font-size: 12px; }
-        td input { background: transparent; border: none; color: white; width: 100%; text-align: left; outline: none; font-weight: 600; }
-        .check-cell { cursor: pointer; font-size: 18px; transition: 0.2s; min-width: 45px; }
-        .check-cell:hover { background: rgba(250, 204, 21, 0.1); }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; }
+        
+        /* Dashboard Styles */
+        #dashboard { max-width: 900px; margin: 0 auto; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 25px; }
+        .file-card { background: var(--card); padding: 25px 15px; border-radius: 15px; border: 1px solid var(--border); cursor: pointer; text-align: center; transition: 0.2s; position: relative; }
+        .file-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .file-card b { display: block; font-size: 30px; margin-bottom: 10px; }
+        .file-name { display: block; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* Action Icons on Cards */
+        .card-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 8px; }
+        .action-btn { cursor: pointer; font-size: 14px; opacity: 0.6; transition: 0.2s; }
+        .action-btn:hover { opacity: 1; transform: scale(1.2); }
+
+        /* Editor Styles */
+        #editor { display: none; }
+        .header-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card); padding: 15px; border-radius: 12px; border: 1px solid var(--border); }
+        button { border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 11px; color: white; background: var(--border); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-green { background: #22c55e; }
+
+        .table-container { width: 100%; overflow-x: auto; background: var(--card); border-radius: 12px; border: 1px solid var(--border); max-height: 75vh; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid var(--border); padding: 12px; text-align: center; min-width: 45px; }
+        th:first-child, td:first-child { position: sticky; left: 0; background: #1e293b; z-index: 10; min-width: 200px; text-align: left; border-right: 3px solid var(--gold); }
+        td input { background: transparent; border: none; color: white; width: 100%; outline: none; font-weight: 700; font-size: 14px; }
+        .check-cell { cursor: pointer; font-size: 20px; user-select: none; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div>
-            <h1 style="margin:0; font-size: 24px; color: var(--gold); letter-spacing: -1px;">FlexGrid Planner</h1>
-            <p id="modeStatus" style="margin:0; font-size: 12px; opacity: 0.6;">Standard Monthly Mode</p>
+    <div id="dashboard">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 15px;">
+            <h1 style="color: var(--gold); margin: 0;">FlexGrid Hub</h1>
+            <button class="btn-gold" onclick="createNewSheet()">+ NEW SHEET</button>
         </div>
-        <div class="controls">
-            <button onclick="addNewTask()">+ Add Task</button>
-            <button id="addColBtn" style="display:none;" onclick="addCustomColumn()">+ Add Column</button>
-            <button class="primary" onclick="toggleCustomMode()">Toggle Custom Mode</button>
-            <button style="background:#ef4444;" onclick="clearData()">Clear All</button>
+        <div id="fileList" class="file-grid"></div>
+        <div style="margin-top: 40px; text-align: center;">
+            <button class="btn-green" onclick="downloadMasterBackup()">📥 DOWNLOAD MASTER BACKUP</button>
         </div>
     </div>
 
-    <div class="table-container">
-        <table>
-            <thead><tr id="headRow"><th style="min-width: 250px; text-align: left;">Tasks / Habits</th></tr></thead>
-            <tbody id="gridBody"></tbody>
-        </table>
+    <div id="editor">
+        <div class="header-bar">
+            <button onclick="backToDashboard()">⬅ BACK</button>
+            <h2 id="currentSheetTitle" style="margin: 0; color: var(--gold); font-size: 18px;"></h2>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-gold" onclick="addNewTask()">+ TASK</button>
+                <button onclick="addCustomColumn()">+ COL</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr id="headRow"><th>TASK LIST</th></tr></thead>
+                <tbody id="gridBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        let customMode = false;
-        const headRow = document.getElementById('headRow');
-        const gridBody = document.getElementById('gridBody');
+        let allSheets = JSON.parse(localStorage.getItem('flexGridSheets') || '{}');
+        let currentSheetId = null;
 
-        // 1. Initialize Table based on Month
-        function initTable() {
+        function renderDashboard() {
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('editor').style.display = 'none';
+            const list = document.getElementById('fileList');
+            list.innerHTML = '';
+            
+            Object.keys(allSheets).forEach(id => {
+                const card = document.createElement('div');
+                card.className = 'file-card';
+                card.innerHTML = `
+                    <div class="card-actions">
+                        <span class="action-btn" title="Rename" onclick="renameSheet(event, '${id}')">✏️</span>
+                        <span class="action-btn" title="Delete" style="color:#ef4444" onclick="deleteSheet(event, '${id}')">×</span>
+                    </div>
+                    <b>📄</b>
+                    <span class="file-name">${allSheets[id].name}</span>
+                `;
+                card.onclick = () => openSheet(id);
+                list.appendChild(card);
+            });
+        }
+
+        function createNewSheet() {
+            const name = prompt("Name your new sheet:");
+            if (!name) return;
+            const id = 'sheet_' + Date.now();
             const days = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-            for(let i = 1; i <= days; i++) createHeader(i);
-            loadSavedData();
+            allSheets[id] = { name: name, data: { headerCount: days, rows: [] } };
+            saveToStorage();
+            renderDashboard();
         }
 
-        function createHeader(label) {
-            const th = document.createElement('th');
-            th.innerText = label;
-            headRow.appendChild(th);
+        function renameSheet(e, id) {
+            e.stopPropagation();
+            const newName = prompt("Rename sheet to:", allSheets[id].name);
+            if (newName && newName !== allSheets[id].name) {
+                allSheets[id].name = newName;
+                saveToStorage();
+                renderDashboard();
+            }
         }
 
-        function addNewTask(taskName = "") {
+        function openSheet(id) {
+            currentSheetId = id;
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('editor').style.display = 'block';
+            document.getElementById('currentSheetTitle').innerText = allSheets[id].name;
+            
+            const headRow = document.getElementById('headRow');
+            headRow.innerHTML = '<th>TASK LIST</th>';
+            const count = allSheets[id].data.headerCount || 30;
+            
+            for(let i = 1; i <= count; i++) {
+                const th = document.createElement('th');
+                th.innerText = i;
+                headRow.appendChild(th);
+            }
+
+            const gridBody = document.getElementById('gridBody');
+            gridBody.innerHTML = '';
+            allSheets[id].data.rows.forEach(r => renderTaskRow(r.name, r.checks));
+        }
+
+        function renderTaskRow(name = "", checks = []) {
             const row = document.createElement('tr');
-            row.innerHTML = `<td><input type="text" value="${taskName}" onchange="saveData()" placeholder="Enter task..."></td>`;
-            const colCount = headRow.children.length - 1;
-            for(let i = 0; i < colCount; i++) {
+            row.innerHTML = `<td><input type="text" value="${name}" onchange="updateData()" placeholder="..."></td>`;
+            const cols = document.getElementById('headRow').children.length - 1;
+            for(let i = 0; i < cols; i++) {
                 const td = document.createElement('td');
                 td.className = "check-cell";
-                td.onclick = function() { 
-                    this.innerText = this.innerText === "✓" ? "" : "✓"; 
-                    this.style.color = "#facc15";
-                    saveData();
+                td.innerText = checks[i] || "";
+                if(td.innerText === "✓") td.style.color = "var(--gold)";
+                td.onclick = function() {
+                    this.innerText = this.innerText === "✓" ? "" : "✓";
+                    this.style.color = this.innerText === "✓" ? "var(--gold)" : "";
+                    updateData();
                 };
                 row.appendChild(td);
             }
-            gridBody.appendChild(row);
-            saveData();
+            document.getElementById('gridBody').appendChild(row);
         }
 
+        function addNewTask() { renderTaskRow(); updateData(); }
+
         function addCustomColumn() {
-            createHeader(headRow.children.length);
-            Array.from(gridBody.rows).forEach(row => {
+            const th = document.createElement('th');
+            th.innerText = document.getElementById('headRow').children.length;
+            document.getElementById('headRow').appendChild(th);
+            Array.from(document.getElementById('gridBody').rows).forEach(row => {
                 const td = document.createElement('td');
                 td.className = "check-cell";
                 td.onclick = function() { 
                     this.innerText = this.innerText === "✓" ? "" : "✓"; 
-                    this.style.color = "#facc15";
-                    saveData();
+                    this.style.color = "var(--gold)";
+                    updateData();
                 };
                 row.appendChild(td);
             });
-            saveData();
+            updateData();
         }
 
-        function toggleCustomMode() {
-            customMode = !customMode;
-            document.getElementById('addColBtn').style.display = customMode ? "block" : "none";
-            document.getElementById('modeStatus').innerText = customMode ? "Infinite Custom Mode" : "Standard Monthly Mode";
-        }
-
-        // 2. Local Storage Functions
-        function saveData() {
-            const data = {
-                headers: Array.from(headRow.children).slice(1).map(th => th.innerText),
-                rows: Array.from(gridBody.rows).map(row => ({
+        function updateData() {
+            allSheets[currentSheetId].data = {
+                headerCount: document.getElementById('headRow').children.length - 1,
+                rows: Array.from(document.getElementById('gridBody').rows).map(row => ({
                     name: row.cells[0].querySelector('input').value,
                     checks: Array.from(row.cells).slice(1).map(td => td.innerText)
                 }))
             };
-            localStorage.setItem('flexGridData', JSON.stringify(data));
+            saveToStorage();
         }
 
-        function loadSavedData() {
-            const saved = localStorage.getItem('flexGridData');
-            if(!saved) return addNewTask("Water Plants");
-            const data = JSON.parse(saved);
-            
-            // Rebuild headers if custom
-            if(data.headers.length > headRow.children.length - 1) {
-                for(let i = headRow.children.length; i <= data.headers.length; i++) createHeader(i);
-            }
+        function saveToStorage() { localStorage.setItem('flexGridSheets', JSON.stringify(allSheets)); }
+        function backToDashboard() { renderDashboard(); }
+        function deleteSheet(e, id) { e.stopPropagation(); if(confirm("Permanently delete this file?")) { delete allSheets[id]; saveToStorage(); renderDashboard(); } }
 
-            data.rows.forEach(r => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" value="${r.name}" onchange="saveData()"></td>`;
-                r.checks.forEach(c => {
-                    const td = document.createElement('td');
-                    td.className = "check-cell";
-                    td.innerText = c;
-                    td.style.color = "#facc15";
-                    td.onclick = function() { this.innerText = this.innerText === "✓" ? "" : "✓"; saveData(); };
-                    row.appendChild(td);
-                });
-                gridBody.appendChild(row);
-            });
+        function downloadMasterBackup() {
+            const blob = new Blob([JSON.stringify(allSheets)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `FlexGrid_Master_Backup.json`;
+            a.click();
         }
 
-        function clearData() { if(confirm("Clear all tasks?")) { localStorage.clear(); location.reload(); } }
-
-        initTable();
+        renderDashboard();
     </script>
 </body>
 </html>
